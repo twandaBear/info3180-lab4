@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash
 from app.models import UserProfile
 from app.forms import LoginForm
+from app.forms import UploadForm
 
 
 ###
@@ -25,17 +26,24 @@ def about():
 
 
 @app.route('/upload', methods=['POST', 'GET'])
+@login_required
 def upload():
     # Instantiate your form class
+    form = UploadForm
 
     # Validate file upload on submit
     if form.validate_on_submit():
         # Get file data and save to your uploads folder
+        pic = form.pic.data
+
+        filename = secure_filename(pic.filename)
+        pic.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
 
         flash('File Saved', 'success')
         return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
 
-    return render_template('upload.html')
+    return render_template('upload.html', form=form)
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -47,7 +55,7 @@ def login():
     #if form.username.data:
     if form.validate_on_submit():
         # Get the username and password values from the form.
-        username = form.username.date
+        username = form.username.data
         password = form.password.data
 
         # Using your model, query database for a user based on the username
@@ -57,13 +65,14 @@ def login():
         # passed to the login_user() method below.
 
         #user = UserProfile.query.filter_by(username=username)
-        user = db.session.execute(db.select(UserProfile).filter_by(username = username))
+        user = db.session.execute(db.select(UserProfile).filter_by(username=username))
 
         #if user and UserProfile.check_password_hash(user.password, password)
-        if user is not None and check_password_hash(user.password, password)
+        if user is not None and check_password_hash(user.password, password):
             return 'Successfully Logged In'
+
         else:
-            return 'Invalisd username or password'
+            return 'Invalid username or password'
 
 
 
